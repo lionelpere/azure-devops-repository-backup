@@ -54,4 +54,4 @@ The docker image and its documentation is available on Docker Hub ([lionelpere/a
         -e DEVOPS_ORG_URL=`YOUR_ORGANISATION_URL` 
         -e RETENTION_IN_DAYS=7 # Will delete all files older than 7 days in the backup directory
         -e DRY_RUN=true # Will create a dummy file instead of cloning the repository
-        azure-devops-backup 
+        lionelpere/azure-devops-repository-backup 
