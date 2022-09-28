@@ -28,7 +28,7 @@ For this backup script you'll only need to generate a PAT with read access on Co
 
 ### :computer: Launch script
 
-    ./backup.sh -o DEVOPS_ORG_URL -p DEVOPS_PAT -d BACKUP_DIRECTORY --dryrun true --verbose true
+    ./backup-devops.sh -o DEVOPS_ORG_URL -p DEVOPS_PAT -d BACKUP_DIRECTORY --dryrun true --verbose true
 
     Parameters:
        -o | --organization: 
