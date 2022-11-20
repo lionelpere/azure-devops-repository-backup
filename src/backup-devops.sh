@@ -112,7 +112,7 @@ REPO_COUNTER=0
 
     if [[ "${DRY_RUN}" = true ]]; then
         echo "Simulate git clone ${CURRENT_REPO_NAME}"
-        echo ${repo} | base64 -d >> "${CURRENT_REPO_NAME}-definition.txt"
+        echo ${repo} | base64 -d >> "${CURRENT_REPO_NAME}-definition.json"
     else
         #Use Base64 PAT in headerto authentify on Git Repository
         git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone $(_jqR '.webUrl') ${CURRENT_REPO_DIRECTORY}
