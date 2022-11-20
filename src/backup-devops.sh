@@ -88,7 +88,7 @@ REPO_COUNTER=0
     #Get current project name and normalize it to create folder
     CURRENT_PROJECT_NAME=$(_jq '.name')
     CURRENT_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._-]/_/g')
-    mkdir "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}" && cd $_ && pwd
+    mkdir -p "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}" && cd $_ && pwd
 
     #Get Repository list for current project id.
     REPO_LIST_CMD="az repos list --organization ${ORGANIZATION} --project $(_jq '.id')"
