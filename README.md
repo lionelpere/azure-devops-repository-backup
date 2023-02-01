@@ -13,6 +13,8 @@ However most companies want to keep an **on-premise** backup of their code repos
 
 This project provides a bash script to backup all azure devops repositories of an Azure Devops Organization.
 
+A [PowerShell version](https://github.com/Pacman1988/BackupAzureDevopsRepos) of this script has been developped by [Pacman1988](https://github.com/Pacman1988)
+
 ## :fire: Bash Script
 
 ### Prerequisite 
