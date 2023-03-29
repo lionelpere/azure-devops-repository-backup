@@ -1,6 +1,7 @@
 #!/bin/bash
 VERBOSE_MODE=false;
 DRY_RUN=false;
+PROJECT_WIKI=false;
 
 #Get all parameters
 POSITIONAL=()
@@ -36,6 +37,10 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=true
       shift # past argument
       ;;
+    -w|--projectwiki)
+      PROJECT_WIKI=true
+      shift # past argument
+      ;;
     *)    # unknown option
       POSITIONAL+=("$1") # save it in an array for later
       shift # past argument
@@ -51,6 +56,7 @@ echo "ORGANIZATION_URL  = ${ORGANIZATION}"
 echo "BACKUP_ROOT_PATH  = ${BACKUP_ROOT_PATH}"
 echo "RETENTION_DAYS    = ${RETENTION_DAYS}"
 echo "DRY_RUN           = ${DRY_RUN}"
+echo "PROJECT_WIKI      = ${PROJECT_WIKI}"
 echo "VERBOSE_MODE      = ${VERBOSE_MODE}"
 
 #Store script start time
@@ -80,6 +86,9 @@ PROJECT_COUNTER=0
 REPO_COUNTER=0
 
  for project in $(echo "${ProjectList}" | jq -r '.[] | @base64'); do
+
+    WIKI_COUNTER=0
+
     _jq() {
       echo ${project} | base64 -d | jq -r ${1}
     }
@@ -87,7 +96,8 @@ REPO_COUNTER=0
 
     #Get current project name and normalize it to create folder
     CURRENT_PROJECT_NAME=$(_jq '.name')
-    CURRENT_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._-]/_/g')
+    CURRENT_WIKI_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/-/g')    
+    CURRENT_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/_/g')
     mkdir -p "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}" && cd $_ && pwd
 
     #Get Repository list for current project id.
@@ -97,28 +107,46 @@ REPO_COUNTER=0
 
     for repo in $(echo "${REPO_LIST}" | jq -r '.[] | @base64'); do
         _jqR() {
-          echo ${repo} | base64 -d | jq -r ${1}
+           echo ${repo} | base64 -d | jq -r ${1}           
         }
-         echo "====> Backup repo [${REPO_COUNTER}][$(_jqR '.name')] [$(_jqR '.id')] [$(_jqR '.webUrl')]"
+        
+        # There must always be at least one repository per Team Project.
+        if [[ ${WIKI_COUNTER} = 0 ]]; then
+          CURRENT_BASE_WIKI_URL=$(_jqR '.webUrl')  
+          ((WIKI_COUNTER++))        
+        fi
 
+        echo "====> Backup repo [${REPO_COUNTER}][$(_jqR '.name')] [$(_jqR '.id')] [$(_jqR '.webUrl')]"
+                
         #Get current repo name and normalize it to create folder
         CURRENT_REPO_NAME=$(_jqR '.name')
-        CURRENT_REPO_NAME=$(echo $CURRENT_REPO_NAME | sed -e 's/[^A-Za-z0-9._-]/_/g')
-        CURRENT_REPO_DIRECTORY="${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}/${CURRENT_REPO_NAME}"
+        CURRENT_REPO_NAME=$(echo $CURRENT_REPO_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/_/g')
+        CURRENT_REPO_DIRECTORY="${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}/repo/${CURRENT_REPO_NAME}"
 
         # mkdir -p ${CURRENT_REPO_DIRECTORY} && cd $_ && pwd
 
         # touch "dummyfile"
 
-    if [[ "${DRY_RUN}" = true ]]; then
-        echo "Simulate git clone ${CURRENT_REPO_NAME}"
-        echo ${repo} | base64 -d >> "${CURRENT_REPO_NAME}-definition.json"
-    else
-        #Use Base64 PAT in headerto authentify on Git Repository
-        git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone $(_jqR '.webUrl') ${CURRENT_REPO_DIRECTORY}
-    fi
-         ((REPO_COUNTER++))
+        if [[ "${DRY_RUN}" = true ]]; then
+            echo "Simulate git clone ${CURRENT_REPO_NAME}"
+            echo ${repo} | base64 -d >> "${CURRENT_REPO_NAME}-definition.json"
+        else
+            #Use Base64 PAT in headerto authentify on Git Repository
+            git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone $(_jqR '.webUrl') ${CURRENT_REPO_DIRECTORY}
+        fi        
+
+        ((REPO_COUNTER++))
     done
+
+    if [[ "${PROJECT_WIKI}" = true ]]; then
+        CURRENT_WIKI_DIRECTORY="${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}/wiki/${CURRENT_WIKI_PROJECT_NAME}"             
+        CURRENT_BASE_WIKI_URL=$(echo $CURRENT_BASE_WIKI_URL | sed -E 's/(https:\/\/dev.azure.com\/.+\/_git\/)(.+)$/\1/g')
+        CURRENT_WIKI_URL="${CURRENT_BASE_WIKI_URL}${CURRENT_WIKI_PROJECT_NAME}.wiki"
+
+        echo "====> Backup Wiki repo ${CURRENT_WIKI_URL}"            
+        git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone ${CURRENT_WIKI_URL} ${CURRENT_WIKI_DIRECTORY}
+    fi
+
 
     ((PROJECT_COUNTER++))
 done
