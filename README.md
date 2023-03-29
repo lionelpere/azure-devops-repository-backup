@@ -39,6 +39,7 @@ For this backup script you'll only need to generate a PAT with read access on Co
             The directory where to store the backup archive.
        -p | --pat: The Personnal Access Token (PAT) that you need to generate for your Azure Devops Account
        -x|--dryrun: true/false - If you want to create a dummy file instead of cloning the repositories
+       -w|--projectwiki: true/false - If you want also backup the Wiki structure of the projects
        -v|--verbose true/false - Verbose mode
 
 
