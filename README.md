@@ -2,11 +2,11 @@
 
 ## :bulb: Introduction
 
-Microsoft don't provide any built-in solution to backup Azure Devops Services.
+Microsoft doesn't provide any built-in solution to backup the Azure Devops Services.
 
-They ask them to thrust the process as described in the [Data Protection Overview](https://docs.microsoft.com/en-us/azure/devops/organizations/security/data-protection?view=azure-devops) page.
+They ask them to trust the process as described in the [Data Protection Overview](https://docs.microsoft.com/en-us/azure/devops/organizations/security/data-protection?view=azure-devops) page.
 
-However most companies want to keep an **on-premise** backup of their code repositories in case of Disaster Recovery Plan (DRP).
+However most companies want to keep an **on-premise** backup of their code repositories for their Disaster Recovery Plan (DRP).
 
 
 ## Project 
