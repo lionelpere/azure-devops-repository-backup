@@ -2,6 +2,9 @@
 VERBOSE_MODE=false;
 DRY_RUN=false;
 
+#Backup status
+BACKUP_SUCCESS=true;
+
 #Get all parameters
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
@@ -114,8 +117,13 @@ REPO_COUNTER=0
         echo "Simulate git clone ${CURRENT_REPO_NAME}"
         echo ${repo} | base64 -d >> "${CURRENT_REPO_NAME}-definition.json"
     else
-        #Use Base64 PAT in headerto authentify on Git Repository
+        # Use Base64 PAT in header to authenticate on Git Repository
         git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone $(_jqR '.webUrl') ${CURRENT_REPO_DIRECTORY}
+        
+        if [ $? -ne 0 ]; then
+            echo "====> Backup failed for repo [${CURRENT_REPO_NAME}]"
+            BACKUP_SUCCESS=false
+        fi
     fi
          ((REPO_COUNTER++))
     done
@@ -146,7 +154,11 @@ eval "echo Elapsed time : $(date -ud "@$elapsed" +'$((%s/3600/24)) days %H hr %M
 
 if [[ -z "${RETENTION_DAYS}" ]]; then
     echo "=== No retention policy"
-else 
-    echo "=== Apply retention policy (${RETENTION_DAYS} days)"
-    find ${BACKUP_ROOT_PATH}/* -type f -mtime +${RETENTION_DAYS} -exec rm -rfv {} \; 
+else
+    if [[ "${BACKUP_SUCCESS}" = true ]]; then
+        echo "=== Apply retention policy (${RETENTION_DAYS} days)"
+        find ${BACKUP_ROOT_PATH}/* -type f -mtime +${RETENTION_DAYS} -exec rm -rfv {} \;
+    else
+        echo "=== Backup failed, retention policy not applied"
+    fi
 fi
