@@ -45,6 +45,8 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+echo "=== Azure DevOps Repository Backup Script ==="
+echo "=== v.1.0.1 == 
 
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
