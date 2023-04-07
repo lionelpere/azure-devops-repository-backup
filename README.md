@@ -16,8 +16,6 @@ This project provides a bash script to backup all azure devops repositories of a
 A [PowerShell version](https://github.com/Pacman1988/BackupAzureDevopsRepos) of this script has been developped by [Pacman1988](https://github.com/Pacman1988)
 
 
-Current version 1.0.1
-
 ## :fire: Bash Script
 
 ### Prerequisite 
@@ -53,7 +51,7 @@ For this backup script you'll only need to generate a PAT with read access on Co
 ## :whale: Use this in docker
 
 - Stable image version  ![version](https://img.shields.io/badge/version-1.0.0-green)
-- Based on script version: ![script](https://img.shields.io/badge/version-1.0.0-green)
+- Based on script version: ![script](https://img.shields.io/badge/version-1.0.0-orange)
 
 If you don't want to install all those prerequisities or you want to isolate this process, you can run this task in a docker image.
 
