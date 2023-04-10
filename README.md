@@ -2,11 +2,11 @@
 
 ## :bulb: Introduction
 
-Microsoft don't provide any built-in solution to backup Azure Devops Services.
+Microsoft doesn't provide any built-in solution to backup the Azure Devops Services.
 
-They ask them to thrust the process as described in the [Data Protection Overview](https://docs.microsoft.com/en-us/azure/devops/organizations/security/data-protection?view=azure-devops) page.
+They ask them to trust the process as described in the [Data Protection Overview](https://docs.microsoft.com/en-us/azure/devops/organizations/security/data-protection?view=azure-devops) page.
 
-However most companies want to keep an **on-premise** backup of their code repositories in case of Disaster Recovery Plan (DRP).
+However most companies want to keep an **on-premise** backup of their code repositories for their Disaster Recovery Plan (DRP).
 
 
 ## Project 
@@ -14,6 +14,7 @@ However most companies want to keep an **on-premise** backup of their code repos
 This project provides a bash script to backup all azure devops repositories of an Azure Devops Organization.
 
 A [PowerShell version](https://github.com/Pacman1988/BackupAzureDevopsRepos) of this script has been developped by [Pacman1988](https://github.com/Pacman1988)
+
 
 ## :fire: Bash Script
 
@@ -30,6 +31,10 @@ For this backup script you'll only need to generate a PAT with read access on Co
 
 ### :computer: Launch script
 
+![version](https://img.shields.io/badge/version-1.0.1-green)
+
+[Release notes](/docsrelease-notes.md)
+
     ./backup-devops.sh -o DEVOPS_ORG_URL -p DEVOPS_PAT -d BACKUP_DIRECTORY --dryrun true --verbose true
 
     Parameters:
@@ -45,6 +50,9 @@ For this backup script you'll only need to generate a PAT with read access on Co
 
 
 ## :whale: Use this in docker
+
+- Stable image version  ![version](https://img.shields.io/badge/version-1.0.0-green)
+- Based on script version: ![script](https://img.shields.io/badge/version-1.0.0-orange)
 
 If you don't want to install all those prerequisities or you want to isolate this process, you can run this task in a docker image.
 
