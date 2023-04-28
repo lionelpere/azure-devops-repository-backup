@@ -22,7 +22,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            name/app
+            lionelpere/azure-devops-repository-backup
           tags: |
             type=ref,event=branch
             type=ref,event=pr
