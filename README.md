@@ -51,8 +51,8 @@ For this backup script you'll only need to generate a PAT with read access on Co
 
 ## :whale: Use this in docker
 
-- Stable image version  ![version](https://img.shields.io/badge/version-1.0.0-green)
-- Based on script version: ![script](https://img.shields.io/badge/version-1.0.0-orange)
+- Stable image version  ![version](https://img.shields.io/badge/version-1.0.1-green)
+- Based on script version: ![script](https://img.shields.io/badge/version-1.0.1-green)
 
 If you don't want to install all those prerequisities or you want to isolate this process, you can run this task in a docker image.
 
@@ -65,4 +65,5 @@ The docker image and its documentation is available on Docker Hub ([lionelpere/a
         -e DEVOPS_ORG_URL=`YOUR_ORGANISATION_URL` 
         -e RETENTION_IN_DAYS=7 # Will delete all files older than 7 days in the backup directory
         -e DRY_RUN=true # Will create a dummy file instead of cloning the repository
+        -e WIKI=true # If you want also backup the Wiki structure of the projects
         lionelpere/azure-devops-repository-backup 
