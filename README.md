@@ -56,7 +56,7 @@ For this backup script you'll only need to generate a PAT with read access on Co
 
 If you don't want to install all those prerequisities or you want to isolate this process, you can run this task in a docker image.
 
-The docker image and its documentation is available on Docker Hub ([lionelpere/azure-devops-repository-backup](https://hub.docker.com/repository/docker/lionelpere/azure-devops-repository-backup/))
+The docker image and its documentation is available on Docker Hub ([lionelpere/azure-devops-repository-backup](https://hub.docker.com/r/lionelpere/azure-devops-repository-backup))
 ### :computer: Launch script
 
     docker run 
