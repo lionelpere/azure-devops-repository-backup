@@ -136,12 +136,17 @@ REPO_COUNTER=0
         echo "Simulate git clone ${CURRENT_REPO_NAME}"
         echo ${repo} | base64 -d >> "${CURRENT_REPO_NAME}-definition.json"
     else
-        # Use Base64 PAT in header to authenticate on Git Repository
-        git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone $(_jqR '.webUrl') ${CURRENT_REPO_DIRECTORY}
-        
-        if [ $? -ne 0 ]; then
+        # check if repo is disabled and skip it
+        # disabled repos cannot be accessed
+        if [[ "$(_jqR '.isDisabled')" = false ]]; then
+          # Use Base64 PAT in header to authenticate on Git Repository
+          git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone $(_jqR '.webUrl') ${CURRENT_REPO_DIRECTORY}
+          if [ $? -ne 0 ]; then
             echo "====> Backup failed for repo [${CURRENT_REPO_NAME}]"
             BACKUP_SUCCESS=false
+          fi
+        else
+          echo "====> Skipping disabled repo: [${CURRENT_REPO_NAME}]"
         fi
     fi        
 
