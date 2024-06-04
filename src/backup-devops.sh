@@ -83,7 +83,7 @@ ProjectList=$(az devops project list --organization ${ORGANIZATION} --query 'val
 #Create backup folder with current time as name
 BACKUP_FOLDER=$(date +"%Y%m%d%H%M")
 BACKUP_DIRECTORY="${BACKUP_ROOT_PATH}/${BACKUP_FOLDER}"
-mkdir -p "${BACKUP_DIRECTORY}" && cd $_
+mkdir -p "${BACKUP_DIRECTORY}"
 echo "=== Backup folder created [${BACKUP_DIRECTORY}]"
 
 #Initialize counters
@@ -103,7 +103,7 @@ REPO_COUNTER=0
     CURRENT_PROJECT_NAME=$(_jq '.name')
     CURRENT_WIKI_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/-/g')    
     CURRENT_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/_/g')
-    mkdir -p "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}" && cd $_ && pwd
+    mkdir -p "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}" && pwd
 
     #Get Repository list for current project id.
     REPO_LIST_CMD="az repos list --organization ${ORGANIZATION} --project $(_jq '.id')"
@@ -134,7 +134,8 @@ REPO_COUNTER=0
 
     if [[ "${DRY_RUN}" = true ]]; then
         echo "Simulate git clone ${CURRENT_REPO_NAME}"
-        echo ${repo} | base64 -d >> "${CURRENT_REPO_NAME}-definition.json"
+        mkdir -p ${CURRENT_REPO_DIRECTORY}
+        echo ${repo} | base64 -d >> "${CURRENT_REPO_DIRECTORY}/${CURRENT_REPO_NAME}-definition.json"
     else
         # check if repo is disabled and skip it
         # disabled repos cannot be accessed
