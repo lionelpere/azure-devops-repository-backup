@@ -41,7 +41,7 @@ function die {
 
 # usage function
 function usage {
-  usage="$(basename "$0") [-h] [-p pat] [-d directory] [-o organization] [-r retention] [-v] [-x] [-w] -- backup Azure DevOps repositories
+  usage="$(basename "$0") [-h] -p PAT -d backup-dir -o organization -r retention [-v] [-x] [-w] -- backup Azure DevOps repositories
 where:
     -h  show this help text
     -p  personal access token (PAT) for Azure DevOps [REQUIRED]
