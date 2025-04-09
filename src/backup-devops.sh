@@ -1,57 +1,124 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# strict mode configuration
+set -uo pipefail
+
+# enable extended pathname expansion (e.g. $ ls !(*.jpg|*.gif))
+shopt -s extglob
+
+# min bash 4 version
+[[ "${BASH_VERSINFO[0]}" -lt 4 ]] && die "Bash >=4 required"
+
+################################################################################
+### variables and defaults
+################################################################################
 VERBOSE_MODE=false;
 DRY_RUN=false;
-PROJECT_WIKI=false;
+PROJECT_WIKI=true;
 
-#Backup status
 BACKUP_SUCCESS=true;
 
-#Get all parameters
-POSITIONAL=()
-while [[ $# -gt 0 ]]; do
-  key="$1"
+# required options
+PAT=""
+BACKUP_ROOT_PATH=""
+ORGANIZATION=""
+RETENTION_DAYS=""
 
-  case $key in
-    -p|--pat)
-      PAT="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -d|--directory)
-      BACKUP_ROOT_PATH="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -o|--organization)
-      ORGANIZATION="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -r|--retention)
-      RETENTION_DAYS="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -v|--verbose)
-      VERBOSE_MODE=true
-      shift # past argument
-      ;;
-    -x|--dryrun)
-      DRY_RUN=true
-      shift # past argument
-      ;;
-    -w|--projectwiki)
-      PROJECT_WIKI=true
-      shift # past argument
-      ;;
-    *)    # unknown option
-      POSITIONAL+=("$1") # save it in an array for later
-      shift # past argument
-      ;;
+################################################################################
+### FUNCTIONS
+################################################################################
+
+# check if command is available
+function installed {
+  command -v "${1}" >/dev/null 2>&1
+}
+
+# die and exit with code 1
+function die {
+  >&2 printf '%s %s\n' "Fatal: " "${@}"
+  exit 1
+}
+
+# usage function
+function usage {
+  usage="$(basename "$0") [-h] -p PAT -d backup-dir -o organization -r retention [-v] [-x] [-w] -- backup Azure DevOps repositories
+where:
+    -h  show this help text
+    -p  personal access token (PAT) for Azure DevOps [REQUIRED]
+    -d  backup directory path: the directory where to store the backup archive [REQUIRED]
+    -o  Azure DevOps organization URL (e.g. https://dev.azure.com/organization) [REQUIRED]
+    -r  retention days for backup files: how many days to keep the backup files [REQUIRED]
+    -v  verbose mode [default is false]
+    -x  dry run mode (no actual backup, only simulation) [default is false]
+    -w  backup project wiki [default is true]"
+  printf '%s\n' "${usage}"
+}
+
+################################################################################
+### MAIN
+################################################################################
+
+# check for required commands
+deps=(jq base64 git az)
+for dep in "${deps[@]}"; do
+  installed "${dep}" || die "Missing '${dep}'"
+done
+
+# parse options
+while getopts ':p:d:o:r:vxwh' option; do
+  case "$option" in
+    p) PAT=$OPTARG
+       ;;
+    d) BACKUP_ROOT_PATH=$OPTARG
+       ;;
+    o) ORGANIZATION=$OPTARG
+       ;;
+    r) RETENTION_DAYS=$OPTARG
+       ;;
+    v) VERBOSE_MODE=true
+       ;;
+    x) DRY_RUN=true
+       ;;
+    w) PROJECT_WIKI=true
+       ;;
+    h) usage
+       exit 0
+       ;;
+    :) printf 'missing argument for -%s\n' "$OPTARG" >&2
+       usage
+       exit 1
+       ;;
+   \?) printf 'illegal option: -%s\n' "$OPTARG" >&2
+       usage
+       exit 1
+       ;;
   esac
 done
+shift $((OPTIND - 1))
+
+# deal with required options
+# die if PAT is empty
+[[ -z "${PAT}" ]] && die "PAT is required (-p option)"
+# die if directory argument is empty
+[[ -z "${BACKUP_ROOT_PATH}" ]] && die "Backup directory is required (-d option)"
+# die if organization argument is empty
+[[ -z "${ORGANIZATION}" ]] && die "Organization URL is required (-o option)"
+# die if retention argument is empty
+[[ -z "${RETENTION_DAYS}" ]] && die "Retention days is required (-r option)"
+# die if retention argument is not a number
+[[ ! "${RETENTION_DAYS}" =~ ^[0-9]+$ ]] && die "Retention days must be a number"
+# die if retention argument is less than 1
+[[ "${RETENTION_DAYS}" -lt 1 ]] && die "Retention days must be greater than 0"
+# die if retention argument is greater than 365
+[[ "${RETENTION_DAYS}" -gt 365 ]] && die "Retention days must be less than 365"
+# die if directory does not exist
+[[ ! -d "${BACKUP_ROOT_PATH}" ]] && die "Backup directory does not exist"
+# die if directory is not writable
+[[ ! -w "${BACKUP_ROOT_PATH}" ]] && die "Backup directory is not writable"
+# die if directory is not a directory
+[[ ! -d "${BACKUP_ROOT_PATH}" ]] && die "Backup directory is not a directory"
+
 echo "=== Azure DevOps Repository Backup Script ==="
-echo "=== v.1.0.1 =="
 
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
@@ -75,7 +142,7 @@ az extension add --name 'azure-devops'
 echo "=== Set AZURE_DEVOPS_EXT_PAT env variable"
 export AZURE_DEVOPS_EXT_PAT=${PAT} 
 #Store PAT in Base64
-B64_PAT=$(printf "%s"":${PAT}" | base64)
+B64_PAT=$(printf "%s"":${PAT}" | base64 -w 0)
 
 echo "=== Get project list"
 ProjectList=$(az devops project list --organization ${ORGANIZATION} --query 'value[]')
@@ -83,8 +150,18 @@ ProjectList=$(az devops project list --organization ${ORGANIZATION} --query 'val
 #Create backup folder with current time as name
 BACKUP_FOLDER=$(date +"%Y%m%d%H%M")
 BACKUP_DIRECTORY="${BACKUP_ROOT_PATH}/${BACKUP_FOLDER}"
-mkdir -p "${BACKUP_DIRECTORY}"
-echo "=== Backup folder created [${BACKUP_DIRECTORY}]"
+if [[ "${DRY_RUN}" = true ]]; then
+  echo "=== Simulate Backup folder creation [${BACKUP_DIRECTORY}]"
+else
+  mkdir -p "${BACKUP_DIRECTORY}"
+  if [ $? -ne 0 ]; then
+    echo "=== Backup folder creation failed [${BACKUP_DIRECTORY}]"
+    BACKUP_SUCCESS=false
+    exit 1
+  else
+    echo "=== Backup folder created [${BACKUP_DIRECTORY}]"
+  fi
+fi
 
 #Initialize counters
 PROJECT_COUNTER=0
@@ -103,8 +180,19 @@ REPO_COUNTER=0
     CURRENT_PROJECT_NAME=$(_jq '.name')
     CURRENT_WIKI_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/-/g')    
     CURRENT_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/_/g')
-    mkdir -p "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}" && pwd
-
+    if [[ "${DRY_RUN}" = true ]]; then
+      echo "=== Simulate Backup folder created [${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}]"
+    else
+      mkdir -p "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}"
+      if [ $? -ne 0 ]; then
+        echo "=== Backup folder creation failed [${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}]"
+        BACKUP_SUCCESS=false
+        exit 1
+      else
+        echo "=== Backup folder created [${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}]"
+      fi
+    fi
+    
     #Get Repository list for current project id.
     REPO_LIST_CMD="az repos list --organization ${ORGANIZATION} --project $(_jq '.id')"
     REPO_LIST=$($REPO_LIST_CMD)
@@ -128,14 +216,8 @@ REPO_COUNTER=0
         CURRENT_REPO_NAME=$(echo $CURRENT_REPO_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/_/g')
         CURRENT_REPO_DIRECTORY="${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}/repo/${CURRENT_REPO_NAME}"
 
-        # mkdir -p ${CURRENT_REPO_DIRECTORY} && cd $_ && pwd
-
-        # touch "dummyfile"
-
     if [[ "${DRY_RUN}" = true ]]; then
         echo "Simulate git clone ${CURRENT_REPO_NAME}"
-        mkdir -p ${CURRENT_REPO_DIRECTORY}
-        echo ${repo} | base64 -d >> "${CURRENT_REPO_DIRECTORY}/${CURRENT_REPO_NAME}-definition.json"
     else
         # check if repo is disabled and skip it
         # disabled repos cannot be accessed
@@ -158,25 +240,37 @@ REPO_COUNTER=0
         CURRENT_WIKI_DIRECTORY="${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}/wiki/${CURRENT_WIKI_PROJECT_NAME}"             
         CURRENT_BASE_WIKI_URL=$(echo $CURRENT_BASE_WIKI_URL | sed -E 's/(https:\/\/dev.azure.com\/.+\/_git\/)(.+)$/\1/g')
         CURRENT_WIKI_URL="${CURRENT_BASE_WIKI_URL}${CURRENT_WIKI_PROJECT_NAME}.wiki"
-
-        echo "====> Backup Wiki repo ${CURRENT_WIKI_URL}"            
-        git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone ${CURRENT_WIKI_URL} ${CURRENT_WIKI_DIRECTORY}
+        if [[ "${DRY_RUN}" = true ]]; then
+            echo "Simulate WIKI git clone ${CURRENT_WIKI_PROJECT_NAME}"
+        else
+          echo "====> Backup Wiki repo ${CURRENT_WIKI_URL}"            
+          git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone ${CURRENT_WIKI_URL} ${CURRENT_WIKI_DIRECTORY}
+        fi
     fi
 
     ((PROJECT_COUNTER++))
 done
 
-#Backup summary
-#echo "=== Backup structure ==="
-#find ${BACKUP_DIRECTORY} -maxdepth 2
+# if DRYRUN true skip useless steps
+if [[ "${DRY_RUN}" = true ]]; then
+  echo "=== Skip tar and retention cause mode DRYRUN is true ==="
+  echo "=== Backup completed ==="
+  exit 0
+fi
+
+if [[ "${VERBOSE_MODE}"" = true ]]; then
+  echo "=== Backup structure ==="
+  find ${BACKUP_DIRECTORY} -maxdepth 2 -ls
+fi
+
 end_time=$(date +%s)
 elapsed=$(( end_time - start_time ))
 backup_size_uncompressed=$(du -hs ${BACKUP_DIRECTORY})
 
 cd ${BACKUP_ROOT_PATH}
 echo "=== Compress folder"
-tar czf ${BACKUP_FOLDER}.tar.gz ${BACKUP_FOLDER}
-backup_size_compressed=$(du -hs ${BACKUP_FOLDER}.tar.gz)
+tar cjf ${BACKUP_FOLDER}.tar.bz ${BACKUP_FOLDER}
+backup_size_compressed=$(du -hs ${BACKUP_FOLDER}.tar.bz)
 echo "=== Remove raw data in folder"
 rm -rf ${BACKUP_FOLDER}
 
@@ -191,8 +285,13 @@ if [[ -z "${RETENTION_DAYS}" ]]; then
     echo "=== No retention policy"
 else
     if [[ "${BACKUP_SUCCESS}" = true ]]; then
-        echo "=== Apply retention policy (${RETENTION_DAYS} days)"
-        find ${BACKUP_ROOT_PATH}/* -type f -mtime +${RETENTION_DAYS} -exec rm -rfv {} \;
+        # doublecheck for BACKUP_ROOT_PATH
+        if [ -n "${BACKUP_ROOT_PATH}" -a "${BACKUP_ROOT_PATH}" != "/" ]; then
+          echo "=== Apply retention policy (${RETENTION_DAYS} days)"
+          find ${BACKUP_ROOT_PATH} -mindepth 1 -maxdepth 1 -type f -mtime +${RETENTION_DAYS} -delete
+        else
+          echo "=== Skip deletion due to invalid backup directory (${BACKUP_ROOT_PATH})"
+        fi
     else
         echo "=== Backup failed, retention policy not applied"
     fi

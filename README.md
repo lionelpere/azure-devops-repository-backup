@@ -23,7 +23,7 @@ A [PowerShell version](https://github.com/Pacman1988/BackupAzureDevopsRepos) of 
 * Shell bash (If you're running on windows, use [WSL2](https://docs.microsoft.com/en-us/windows/wsl/) to easily run a GNU/Linux environment)
 * Azure CLI : [Installation guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
 * Azure CLI - Devops Extension : [Installation guide](https://docs.microsoft.com/en-us/azure/devops/cli/?view=azure-devops)
-* jq, base64 packages (available in most Linux distributions)
+* git, jq, base64 packages (available in most Linux distributions)
 
 Interaction with the Azure DevOps API requires a [personal access token](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate?view=azure-devops).
 
@@ -35,19 +35,16 @@ For this backup script you'll only need to generate a PAT with read access on Co
 
 [Release notes](/docsrelease-notes.md)
 
-    ./backup-devops.sh -o DEVOPS_ORG_URL -p DEVOPS_PAT -d BACKUP_DIRECTORY --dryrun true --verbose true
-
-    Parameters:
-       -o | --organization: 
-            The azure devops organisation URL (eg: https://dev.azure.com/my-company)
-       -d | --directory: 
-            The directory where to store the backup archive.
-       -p | --pat: The Personnal Access Token (PAT) that you need to generate for your Azure Devops Account
-       -x|--dryrun: true/false - If you want to create a dummy file instead of cloning the repositories
-       -w|--projectwiki: true/false - If you want also backup the Wiki structure of the projects
-       -v|--verbose true/false - Verbose mode
-
-
+     ./backup-devops.sh [-h] -p PAT -d backup-dir -o organization -r retention [-v] [-x] [-w] -- backup Azure DevOps repositories
+     where:
+          -h  show this help text
+          -p  personal access token (PAT) for Azure DevOps [REQUIRED]
+          -d  backup directory path: the directory where to store the backup archive [REQUIRED]
+          -o  Azure DevOps organization URL (e.g. https://dev.azure.com/organization) [REQUIRED]
+          -r  retention days for backup files: how many days to keep the backup files [REQUIRED]
+          -v  verbose mode [default is false]
+          -x  dry run mode (no actual backup, only simulation) [default is false]
+          -w  backup project wiki [default is true]
 
 ## :whale: Use this in docker
 
