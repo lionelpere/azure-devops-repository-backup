@@ -259,7 +259,7 @@ if [[ -z "${RETENTION_DAYS}" ]]; then
 else
     if [[ "${BACKUP_SUCCESS}" = true ]]; then
         # doublecheck for BACKUP_ROOT_PATH
-        if [ -n "$(BACKUP_ROOT_PATH)" -a "$(BACKUP_ROOT_PATH)" != "/" ]; then
+        if [ -n "${BACKUP_ROOT_PATH}" -a "${BACKUP_ROOT_PATH}" != "/" ]; then
           echo "=== Apply retention policy (${RETENTION_DAYS} days)"
           find ${BACKUP_ROOT_PATH} -mindepth 1 -maxdepth 1 -type f -mtime +${RETENTION_DAYS} -delete
         else
