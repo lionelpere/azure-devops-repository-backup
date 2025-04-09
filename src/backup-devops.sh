@@ -258,7 +258,7 @@ if [[ "${DRY_RUN}" = true ]]; then
   exit 0
 fi
 
-if [[ "${VERBOSE_MODE}"" = true ]]; then
+if [[ "${VERBOSE_MODE}" = true ]]; then
   echo "=== Backup structure ==="
   find ${BACKUP_DIRECTORY} -maxdepth 2 -ls
 fi
