@@ -18,6 +18,12 @@ PROJECT_WIKI=false;
 
 BACKUP_SUCCESS=true;
 
+# required options
+PAT=""
+BACKUP_ROOT_PATH=""
+ORGANIZATION=""
+RETENTION_DAYS=""
+
 ################################################################################
 ### FUNCTIONS
 ################################################################################
