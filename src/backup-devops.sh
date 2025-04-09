@@ -14,7 +14,7 @@ shopt -s extglob
 ################################################################################
 VERBOSE_MODE=false;
 DRY_RUN=false;
-PROJECT_WIKI=false;
+PROJECT_WIKI=true;
 
 BACKUP_SUCCESS=true;
 
@@ -44,14 +44,14 @@ function usage {
   usage="$(basename "$0") [-h] [-p pat] [-d directory] [-o organization] [-r retention] [-v] [-x] [-w] -- backup Azure DevOps repositories
 where:
     -h  show this help text
-    -p  personal access token (PAT) for Azure DevOps
-    -d  backup directory path
-    -o  organization URL (e.g. https://dev.azure.com/organization)
-    -r  retention days for backup files
-    -v  verbose mode
-    -x  dry run mode (no actual backup)
-    -w  backup project wiki"
-  printf '%s\n' "${usage}"  
+    -p  personal access token (PAT) for Azure DevOps [REQUIRED]
+    -d  backup directory path: the directory where to store the backup archive [REQUIRED]
+    -o  Azure DevOps organization URL (e.g. https://dev.azure.com/organization) [REQUIRED]
+    -r  retention days for backup files: how many days to keep the backup files [REQUIRED]
+    -v  verbose mode [default is false]
+    -x  dry run mode (no actual backup, only simulation) [default is false]
+    -w  backup project wiki [default is true]"
+  printf '%s\n' "${usage}"
 }
 
 ################################################################################
