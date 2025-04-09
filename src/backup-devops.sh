@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# set -o pipefail extends -e by making any failure anywhere in a pipeline fatal
-set -euo pipefail
+# strict mode configuration
+set -uo pipefail
 
 # enable extended pathname expansion (e.g. $ ls !(*.jpg|*.gif))
 shopt -s extglob
