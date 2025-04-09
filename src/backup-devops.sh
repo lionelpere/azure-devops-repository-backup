@@ -258,9 +258,11 @@ if [[ "${DRY_RUN}" = true ]]; then
   exit 0
 fi
 
-#Backup summary
-#echo "=== Backup structure ==="
-#find ${BACKUP_DIRECTORY} -maxdepth 2
+if [[ "${VERBOSE_MODE}"" = true ]]; then
+  echo "=== Backup structure ==="
+  find ${BACKUP_DIRECTORY} -maxdepth 2 -ls
+fi
+
 end_time=$(date +%s)
 elapsed=$(( end_time - start_time ))
 backup_size_uncompressed=$(du -hs ${BACKUP_DIRECTORY})
