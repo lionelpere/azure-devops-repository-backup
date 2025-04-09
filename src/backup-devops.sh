@@ -41,7 +41,7 @@ function die {
 
 # usage function
 function usage {
-  usage="$(basename "$0") [-h] [-p pat] [-d directory] [-o organization] [-r retention] [-v] [-x] -- backup Azure DevOps repositories
+  usage="$(basename "$0") [-h] [-p pat] [-d directory] [-o organization] [-r retention] [-v] [-x] [-w] -- backup Azure DevOps repositories
 where:
     -h  show this help text
     -p  personal access token (PAT) for Azure DevOps
@@ -150,8 +150,12 @@ ProjectList=$(az devops project list --organization ${ORGANIZATION} --query 'val
 #Create backup folder with current time as name
 BACKUP_FOLDER=$(date +"%Y%m%d%H%M")
 BACKUP_DIRECTORY="${BACKUP_ROOT_PATH}/${BACKUP_FOLDER}"
-mkdir -p "${BACKUP_DIRECTORY}"
-echo "=== Backup folder created [${BACKUP_DIRECTORY}]"
+if [[ "${DRY_RUN}" = true ]]; then
+  echo "=== Simulate Backup folder creation [${BACKUP_DIRECTORY}]"
+else
+  mkdir -p "${BACKUP_DIRECTORY}"
+  echo "=== Backup folder created [${BACKUP_DIRECTORY}]"
+fi
 
 #Initialize counters
 PROJECT_COUNTER=0
@@ -170,8 +174,19 @@ REPO_COUNTER=0
     CURRENT_PROJECT_NAME=$(_jq '.name')
     CURRENT_WIKI_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/-/g')    
     CURRENT_PROJECT_NAME=$(echo $CURRENT_PROJECT_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/_/g')
-    mkdir -p "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}" && pwd
-
+    if [[ "${DRY_RUN}" = true ]]; then
+      echo "=== Simulate Backup folder created [${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}]"
+    else
+      mkdir -p "${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}"
+      if [ $? -ne 0 ]; then
+        echo "=== Backup folder creation failed [${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}]"
+        BACKUP_SUCCESS=false
+        exit 1
+      else
+        echo "=== Backup folder created [${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}]"
+      fi
+    fi
+    
     #Get Repository list for current project id.
     REPO_LIST_CMD="az repos list --organization ${ORGANIZATION} --project $(_jq '.id')"
     REPO_LIST=$($REPO_LIST_CMD)
@@ -195,14 +210,8 @@ REPO_COUNTER=0
         CURRENT_REPO_NAME=$(echo $CURRENT_REPO_NAME | sed -e 's/[^A-Za-z0-9._\(\)-]/_/g')
         CURRENT_REPO_DIRECTORY="${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}/repo/${CURRENT_REPO_NAME}"
 
-        # mkdir -p ${CURRENT_REPO_DIRECTORY} && cd $_ && pwd
-
-        # touch "dummyfile"
-
     if [[ "${DRY_RUN}" = true ]]; then
         echo "Simulate git clone ${CURRENT_REPO_NAME}"
-        mkdir -p ${CURRENT_REPO_DIRECTORY}
-        echo ${repo} | base64 -d >> "${CURRENT_REPO_DIRECTORY}/${CURRENT_REPO_NAME}-definition.json"
     else
         # check if repo is disabled and skip it
         # disabled repos cannot be accessed
@@ -225,13 +234,23 @@ REPO_COUNTER=0
         CURRENT_WIKI_DIRECTORY="${BACKUP_DIRECTORY}/${CURRENT_PROJECT_NAME}/wiki/${CURRENT_WIKI_PROJECT_NAME}"             
         CURRENT_BASE_WIKI_URL=$(echo $CURRENT_BASE_WIKI_URL | sed -E 's/(https:\/\/dev.azure.com\/.+\/_git\/)(.+)$/\1/g')
         CURRENT_WIKI_URL="${CURRENT_BASE_WIKI_URL}${CURRENT_WIKI_PROJECT_NAME}.wiki"
-
-        echo "====> Backup Wiki repo ${CURRENT_WIKI_URL}"            
-        git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone ${CURRENT_WIKI_URL} ${CURRENT_WIKI_DIRECTORY}
+        if [[ "${DRY_RUN}" = true ]]; then
+            echo "Simulate WIKI git clone ${CURRENT_WIKI_PROJECT_NAME}"
+        else
+          echo "====> Backup Wiki repo ${CURRENT_WIKI_URL}"            
+          git -c http.extraHeader="Authorization: Basic ${B64_PAT}" clone ${CURRENT_WIKI_URL} ${CURRENT_WIKI_DIRECTORY}
+        fi
     fi
 
     ((PROJECT_COUNTER++))
 done
+
+# if DRYRUN true skip useless steps
+if [[ "${DRY_RUN}" = true ]]; then
+  echo "=== Skip tar and retention cause mode DRYRUN is true ==="
+  echo "=== Backup completed ==="
+  exit 0
+fi
 
 #Backup summary
 #echo "=== Backup structure ==="
