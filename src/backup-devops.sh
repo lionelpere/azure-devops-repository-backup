@@ -142,7 +142,7 @@ az extension add --name 'azure-devops'
 echo "=== Set AZURE_DEVOPS_EXT_PAT env variable"
 export AZURE_DEVOPS_EXT_PAT=${PAT} 
 #Store PAT in Base64
-B64_PAT=$(printf "%s"":${PAT}" | base64)
+B64_PAT=$(printf "%s"":${PAT}" | base64 -w 0)
 
 echo "=== Get project list"
 ProjectList=$(az devops project list --organization ${ORGANIZATION} --query 'value[]')
@@ -154,7 +154,13 @@ if [[ "${DRY_RUN}" = true ]]; then
   echo "=== Simulate Backup folder creation [${BACKUP_DIRECTORY}]"
 else
   mkdir -p "${BACKUP_DIRECTORY}"
-  echo "=== Backup folder created [${BACKUP_DIRECTORY}]"
+  if [ $? -ne 0 ]; then
+    echo "=== Backup folder creation failed [${BACKUP_DIRECTORY}]"
+    BACKUP_SUCCESS=false
+    exit 1
+  else
+    echo "=== Backup folder created [${BACKUP_DIRECTORY}]"
+  fi
 fi
 
 #Initialize counters
