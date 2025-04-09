@@ -1,57 +1,118 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# set -o pipefail extends -e by making any failure anywhere in a pipeline fatal
+set -euo pipefail
+
+# enable extended pathname expansion (e.g. $ ls !(*.jpg|*.gif))
+shopt -s extglob
+
+# min bash 4 version
+[[ "${BASH_VERSINFO[0]}" -lt 4 ]] && die "Bash >=4 required"
+
+################################################################################
+### variables and defaults
+################################################################################
 VERBOSE_MODE=false;
 DRY_RUN=false;
 PROJECT_WIKI=false;
 
-#Backup status
 BACKUP_SUCCESS=true;
 
-#Get all parameters
-POSITIONAL=()
-while [[ $# -gt 0 ]]; do
-  key="$1"
+################################################################################
+### FUNCTIONS
+################################################################################
 
-  case $key in
-    -p|--pat)
-      PAT="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -d|--directory)
-      BACKUP_ROOT_PATH="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -o|--organization)
-      ORGANIZATION="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -r|--retention)
-      RETENTION_DAYS="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -v|--verbose)
-      VERBOSE_MODE=true
-      shift # past argument
-      ;;
-    -x|--dryrun)
-      DRY_RUN=true
-      shift # past argument
-      ;;
-    -w|--projectwiki)
-      PROJECT_WIKI=true
-      shift # past argument
-      ;;
-    *)    # unknown option
-      POSITIONAL+=("$1") # save it in an array for later
-      shift # past argument
-      ;;
+# check if command is available
+function installed {
+  command -v "${1}" >/dev/null 2>&1
+}
+
+# die and exit with code 1
+function die {
+  >&2 printf '%s %s\n' "Fatal: " "${@}"
+  exit 1
+}
+
+# usage function
+function usage {
+  usage="$(basename "$0") [-h] [-p pat] [-d directory] [-o organization] [-r retention] [-v] [-x] -- backup Azure DevOps repositories
+where:
+    -h  show this help text
+    -p  personal access token (PAT) for Azure DevOps
+    -d  backup directory path
+    -o  organization URL (e.g. https://dev.azure.com/organization)
+    -r  retention days for backup files
+    -v  verbose mode
+    -x  dry run mode (no actual backup)
+    -w  backup project wiki"
+  printf '%s\n' "${usage}"  
+}
+
+################################################################################
+### MAIN
+################################################################################
+
+# check for required commands
+deps=(jq base64 git az)
+for dep in "${deps[@]}"; do
+  installed "${dep}" || die "Missing '${dep}'"
+done
+
+# parse options
+while getopts ':p:d:o:r:vxwh' option; do
+  case "$option" in
+    p) PAT=$OPTARG
+       ;;
+    d) BACKUP_ROOT_PATH=$OPTARG
+       ;;
+    o) ORGANIZATION=$OPTARG
+       ;;
+    r) RETENTION_DAYS=$OPTARG
+       ;;
+    v) VERBOSE_MODE=true
+       ;;
+    x) DRY_RUN=true
+       ;;
+    w) PROJECT_WIKI=true
+       ;;
+    h) usage
+       exit 0
+       ;;
+    :) printf 'missing argument for -%s\n' "$OPTARG" >&2
+       usage
+       exit 1
+       ;;
+   \?) printf 'illegal option: -%s\n' "$OPTARG" >&2
+       usage
+       exit 1
+       ;;
   esac
 done
+shift $((OPTIND - 1))
+
+# deal with required options
+# die if PAT is empty
+[[ -z "${PAT}" ]] && die "PAT is required (-p option)"
+# die if directory argument is empty
+[[ -z "${BACKUP_ROOT_PATH}" ]] && die "Backup directory is required (-d option)"
+# die if organization argument is empty
+[[ -z "${ORGANIZATION}" ]] && die "Organization URL is required (-o option)"
+# die if retention argument is empty
+[[ -z "${RETENTION_DAYS}" ]] && die "Retention days is required (-r option)"
+# die if retention argument is not a number
+[[ ! "${RETENTION_DAYS}" =~ ^[0-9]+$ ]] && die "Retention days must be a number"
+# die if retention argument is less than 1
+[[ "${RETENTION_DAYS}" -lt 1 ]] && die "Retention days must be greater than 0"
+# die if retention argument is greater than 365
+[[ "${RETENTION_DAYS}" -gt 365 ]] && die "Retention days must be less than 365"
+# die if directory does not exist
+[[ ! -d "${BACKUP_ROOT_PATH}" ]] && die "Backup directory does not exist"
+# die if directory is not writable
+[[ ! -w "${BACKUP_ROOT_PATH}" ]] && die "Backup directory is not writable"
+# die if directory is not a directory
+[[ ! -d "${BACKUP_ROOT_PATH}" ]] && die "Backup directory is not a directory"
+
 echo "=== Azure DevOps Repository Backup Script ==="
-echo "=== v.1.0.1 =="
 
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
@@ -175,8 +236,8 @@ backup_size_uncompressed=$(du -hs ${BACKUP_DIRECTORY})
 
 cd ${BACKUP_ROOT_PATH}
 echo "=== Compress folder"
-tar czf ${BACKUP_FOLDER}.tar.gz ${BACKUP_FOLDER}
-backup_size_compressed=$(du -hs ${BACKUP_FOLDER}.tar.gz)
+tar cjf ${BACKUP_FOLDER}.tar.bz ${BACKUP_FOLDER}
+backup_size_compressed=$(du -hs ${BACKUP_FOLDER}.tar.bz)
 echo "=== Remove raw data in folder"
 rm -rf ${BACKUP_FOLDER}
 
@@ -191,8 +252,13 @@ if [[ -z "${RETENTION_DAYS}" ]]; then
     echo "=== No retention policy"
 else
     if [[ "${BACKUP_SUCCESS}" = true ]]; then
-        echo "=== Apply retention policy (${RETENTION_DAYS} days)"
-        find ${BACKUP_ROOT_PATH}/* -type f -mtime +${RETENTION_DAYS} -exec rm -rfv {} \;
+        # doublecheck for BACKUP_ROOT_PATH
+        if [ -n "$(BACKUP_ROOT_PATH)" -a "$(BACKUP_ROOT_PATH)" != "/" ]; then
+          echo "=== Apply retention policy (${RETENTION_DAYS} days)"
+          find ${BACKUP_ROOT_PATH} -mindepth 1 -maxdepth 1 -type f -mtime +${RETENTION_DAYS} -delete
+        else
+          echo "=== Skip deletion due to invalid backup directory (${BACKUP_ROOT_PATH})"
+        fi
     else
         echo "=== Backup failed, retention policy not applied"
     fi
