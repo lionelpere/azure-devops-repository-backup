@@ -287,8 +287,25 @@ else
     if [[ "${BACKUP_SUCCESS}" = true ]]; then
         # doublecheck for BACKUP_ROOT_PATH
         if [ -n "${BACKUP_ROOT_PATH}" -a "${BACKUP_ROOT_PATH}" != "/" ]; then
-          echo "=== Apply retention policy (${RETENTION_DAYS} days)"
-          find ${BACKUP_ROOT_PATH} -mindepth 1 -maxdepth 1 -type f -mtime +${RETENTION_DAYS} -delete
+          # Hybrid retention: preserve at least 1 backup, then apply time-based retention
+          backup_count=$(find ${BACKUP_ROOT_PATH} -mindepth 1 -maxdepth 1 -type f -name "*.tar.bz" | wc -l)
+          if [[ $backup_count -gt 1 ]]; then
+            echo "=== Apply retention policy (${RETENTION_DAYS} days, preserve at least 1)"
+            # Only delete old backups if more than 1 backup exists
+            for old_backup in $(find ${BACKUP_ROOT_PATH} -mindepth 1 -maxdepth 1 -type f -name "*.tar.bz" -mtime +${RETENTION_DAYS}); do
+              # Check remaining backup count before each deletion
+              remaining_count=$(find ${BACKUP_ROOT_PATH} -mindepth 1 -maxdepth 1 -type f -name "*.tar.bz" | wc -l)
+              if [[ $remaining_count -gt 1 ]]; then
+                echo "=== Deleting old backup: $(basename "$old_backup")"
+                rm -f "$old_backup"
+              else
+                echo "=== Preserving last backup: $(basename "$old_backup")"
+                break
+              fi
+            done
+          else
+            echo "=== Only 1 backup exists, skipping retention cleanup"
+          fi
         else
           echo "=== Skip deletion due to invalid backup directory (${BACKUP_ROOT_PATH})"
         fi
