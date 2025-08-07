@@ -1,7 +1,7 @@
 # Azure DevOps Repository Backup
 
 [![](https://deepwiki.com/badge.svg)](https://deepwiki.com/lionelpere/azure-devops-repository-backup)
-![version](https://img.shields.io/badge/version-1.0.1-green)
+![version](https://img.shields.io/badge/version-1.0.2-green)
 
 > ⚠️ **Notice**: This repository is maintained with assistance from Claude AI. All code changes are carefully reviewed by human maintainers before being merged to ensure quality and security.
 
