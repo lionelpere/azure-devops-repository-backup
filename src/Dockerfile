@@ -8,6 +8,7 @@ RUN az extension add --name azure-devops
 RUN mkdir -p /data
 RUN apt -y install jq
 run apt -y install git
+RUN apt -y install bzip2
 COPY . /home/devops
 WORKDIR /home/devops
 RUN chmod 777 ./*
